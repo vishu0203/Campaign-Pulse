@@ -8,10 +8,15 @@ export async function initFilters(refreshDashboard) {
 
   /* -------- SEARCH INPUT (LIVE SUGGESTIONS ONLY) -------- */
 
-  searchInput.oninput = async e => {
-    state.filters.pendingSearch = e.target.value.toLowerCase();
-    showSuggestions(await getAllCampaignNames(), suggestionBox);
-  };
+ searchInput.oninput = async e => {
+  state.filters.pendingSearch = e.target.value.toLowerCase();
+  showSuggestions(await getAllCampaignNames(), suggestionBox);
+
+  // APPLY SEARCH LIVE
+  state.filters.search = state.filters.pendingSearch.trim();
+  refreshDashboard();
+};
+
 
   /* Apply search ONLY on blur or Enter */
   searchInput.onblur = () => applySearch(refreshDashboard);
@@ -149,10 +154,12 @@ function showSuggestions(allCampaigns, box) {
 
   box.querySelectorAll('div').forEach(div => {
     div.onclick = () => {
-      document.getElementById('filter-search').value = div.textContent;
-      state.filters.pendingSearch = div.textContent.toLowerCase();
-      state.filters.search = state.filters.pendingSearch;
-      box.style.display = 'none';
-    };
+  document.getElementById('filter-search').value = div.textContent;
+  state.filters.pendingSearch = div.textContent.toLowerCase();
+  state.filters.search = state.filters.pendingSearch.trim();
+  box.style.display = 'none';
+  refreshDashboard();   // ← THIS WAS MISSING
+};
+
   });
 }
