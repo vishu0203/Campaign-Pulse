@@ -8,24 +8,21 @@ export async function initFilters(refreshDashboard) {
 
   /* -------- SEARCH INPUT (LIVE SUGGESTIONS ONLY) -------- */
 
- searchInput.oninput = async e => {
-  state.filters.pendingSearch = e.target.value.toLowerCase();
-  showSuggestions(await getAllCampaignNames(), suggestionBox);
+searchInput.oninput = async e => {
 
-  // APPLY SEARCH LIVE
-  state.filters.search = state.filters.pendingSearch.trim();
-  refreshDashboard();
+  state.filters.pendingSearch = e.target.value.toLowerCase();
+
+  showSuggestions(
+    await getAllCampaignNames(),
+    suggestionBox
+  );
+
+  // DO NOT search yet
 };
 
 
-  /* Apply search ONLY on blur or Enter */
-  searchInput.onblur = () => applySearch(refreshDashboard);
-  searchInput.onkeydown = e => {
-    if (e.key === 'Enter') {
-      applySearch(refreshDashboard);
-      searchInput.blur();
-    }
-  };
+
+  
 
   /* -------- DATE FILTERS -------- */
 
@@ -92,6 +89,67 @@ export async function initFilters(refreshDashboard) {
   document.getElementById('filter-end-date').value = state.filters.endDate;
 
   refreshDashboard();
+
+  function showSuggestions(allCampaigns, box) {
+
+  const value = state.filters.pendingSearch.trim().toLowerCase();
+
+  if (!value) {
+    box.style.display = 'none';
+    return;
+  }
+
+  // 1️⃣ First match campaigns that START with typed value
+  const startsWithMatches = allCampaigns.filter(c =>
+    c.toLowerCase().startsWith(value)
+  );
+
+  // 2️⃣ Then match campaigns that INCLUDE typed value
+  const includesMatches = allCampaigns.filter(c =>
+    !c.toLowerCase().startsWith(value) &&
+    c.toLowerCase().includes(value)
+  );
+
+  // Combine with priority
+  const matches = [...startsWithMatches, ...includesMatches];
+
+  if (!matches.length) {
+    box.style.display = 'none';
+    return;
+  }
+
+  box.innerHTML = matches
+    .slice(0, 7)   // slightly increase limit
+    .map(m =>
+      `<div style="padding:6px;cursor:pointer">${m}</div>`
+    ).join('');
+
+  box.style.display = 'block';
+
+  box.querySelectorAll('div').forEach(div => {
+    div.onclick = () => {
+      const selected = div.textContent;
+
+      document.getElementById('filter-search').value = selected;
+      state.filters.pendingSearch = selected.toLowerCase();
+      state.filters.search = selected.toLowerCase().trim();
+
+      box.style.display = 'none';
+
+      refreshDashboard();
+    };
+  });
+}
+
+searchInput.onblur = () => applySearch(refreshDashboard);
+
+searchInput.onkeydown = e => {
+  if (e.key === 'Enter') {
+    applySearch(refreshDashboard);
+    searchInput.blur();
+  }
+};
+
 }
 
 /* ---------------- HELPER FUNCTIONS ---------------- */
@@ -102,9 +160,16 @@ function applySearch(refreshDashboard) {
 }
 
 async function getAllCampaignNames() {
-  const trend = await getTrendData({});
+
+  const res = await fetch('../data/trend.json');
+  if (!res.ok) return [];
+
+  const trend = await res.json();
+
   return [...new Set(trend.map(t => t.campaign_name))];
 }
+
+
 
 function createSuggestionBox(input) {
   const box = document.createElement('div');
@@ -118,48 +183,4 @@ function createSuggestionBox(input) {
   return box;
 }
 
-function showSuggestions(allCampaigns, box) {
-  const value = state.filters.pendingSearch;
 
-  if (!value) {
-    box.style.display = 'none';
-    return;
-  }
-
-  let matches;
-
-  if (value.endsWith('*')) {
-    const prefix = value.slice(0, -1);
-    matches = allCampaigns.filter(c =>
-      c.toLowerCase().startsWith(prefix)
-    );
-  } else {
-    matches = allCampaigns.filter(c =>
-      c.toLowerCase().includes(value)
-    );
-  }
-
-  if (!matches.length) {
-    box.style.display = 'none';
-    return;
-  }
-
-  box.innerHTML = matches
-    .slice(0, 5)
-    .map(m =>
-      `<div style="padding:6px;cursor:pointer">${m}</div>`
-    ).join('');
-
-  box.style.display = 'block';
-
-  box.querySelectorAll('div').forEach(div => {
-    div.onclick = () => {
-  document.getElementById('filter-search').value = div.textContent;
-  state.filters.pendingSearch = div.textContent.toLowerCase();
-  state.filters.search = state.filters.pendingSearch.trim();
-  box.style.display = 'none';
-  refreshDashboard();   // ← THIS WAS MISSING
-};
-
-  });
-}

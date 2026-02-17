@@ -10,9 +10,21 @@ export async function loadTrendChart() {
 
   const trend = await getTrendData(state.filters);
 
-  if (state.trendChart) state.trendChart.destroy();
+  const chartCanvas = document.getElementById('trendChart');
+const chartContainer = chartCanvas.parentElement;
 
-  if (!trend.length) return;
+if (state.trendChart) {
+  state.trendChart.destroy();
+  state.trendChart = null;
+}
+
+if (!trend.length) {
+  chartContainer.style.display = 'none';
+  return;
+}
+
+// Show container if data exists
+chartContainer.style.display = 'block';
 
   // ---- Collect unique dates & campaigns ----
   const dates = [...new Set(trend.map(d => d.event_date))].sort();
