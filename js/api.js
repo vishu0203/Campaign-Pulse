@@ -1,6 +1,7 @@
 export async function getTrendData(filters) {
   try {
-    const res = await fetch('../data/trend.json');
+   const query = new URLSearchParams(filters).toString();
+const res = await fetch(`http://localhost:3000/api/trend?${query}`);
     if (!res.ok) throw new Error('Trend fetch failed');
 
     let data = await res.json();
