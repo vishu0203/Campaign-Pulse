@@ -17,6 +17,7 @@ let db;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+app.use(express.static(__dirname));
 async function initDb() {
   const dbPath = path.join(__dirname, 'campaign_pulse__');
   console.log('Opening DB at:', dbPath);
